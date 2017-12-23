@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        .text-left{
+            text-align: left;
+        }
+        .text-right{
+            text-align: right;
+        }
+        .mb-15{
+            margin-bottom: 15px;
+        }
+        ul{
+            list-style: none;
+        }
+        .chart-box{
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="chart-box">
+    <ul id="chart-list">
+
+    </ul>
+
+    <input type="text" id="text">
+    <input type="button" id="send-btn" value="发送">
+</div>
+
+
+<script>
+    const getLeftEl = (data) => {
+      let li = document.createElement('li');
+      li.className = 'text-left mb-15';
+      li.innerHTML = `${data.name} : ${data.text} `;
+      return li;
+    };
+
+    const getRightEl = (data) => {
+      let li = document.createElement('li');
+      li.className = 'text-right mb-15';
+      li.innerHTML = `${data.text} : ${data.name}`;
+      return li;
+    };
+</script>
+
+<script>
+  const chartListEl = document.querySelector('#chart-list');
+  const textEl = document.querySelector('#text');
+  const sendBtnEl = document.querySelector('#send-btn');
+
+  const init = () => {
+    //连接 WebSocket
+    if ('WebSocket' in window) {
+      window.ws = new WebSocket("ws://localhost:3001?token=237498");
+      console.log('client connection');
+    } else {
+        alert('不支持WebSocket');
+        return;
+    }
+
+    //接受服务器消息回调
+    ws.onmessage = (evt) => {
+      let data = JSON.parse(evt.data);
+      console.log("Received Message: " + JSON.stringify(data));
+
+      let frag = document.createDocumentFragment();
+      let node;
+      for (let i = 0, len = data.length; i < len; i++) {
+        let obj = data[i];
+        if (obj.pos === 'left') {
+          node = getLeftEl(obj);
+          frag.appendChild(node);
+
+        } else {
+          node = getRightEl(obj);
+          frag.appendChild(node);
+        }
+      }
+
+      chartListEl.appendChild(frag);
+    };
+
+    //连接成功打开状态回调
+    ws.onopen = (evt) => {
+      console.log("Connection open ...");
+    };
+
+    //连接关闭状态回调
+    ws.onclose = () => {
+      console.log("Connection closed.");
+      init();
+    };
+
+    //连接错误状态回调
+    ws.onerror = () => {
+      console.log("Connection error.");
+      init();
+    };
+  };
+
+  init();
+
+
+  //浏览器刷新
+  window.onbeforeunload =() => {
+    ws.close();
+  };
+
+  //点击发送
+  sendBtnEl.addEventListener('click', () => {
+    let sendObj = {
+      name : '如梦',
+      text : textEl.value,
+      pos : 'right'
+    };
+    let node = getRightEl(sendObj);
+
+    chartListEl.appendChild(node);
+
+    ws.send(JSON.stringify(sendObj));
+
+    textEl.value = "";
+  }, false);
+
+</script>
+</body>
+</html>
